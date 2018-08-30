@@ -1,0 +1,29 @@
+OpenMPI setup instructions for linux mint 19
+
+1. Download latest stable release of openmpi.
+
+	https://www.open-mpi.org/software/ompi/v3.1/
+
+2. Open up the tar to desired location
+
+	mv ~/Downloads/openmpi-3.1.2.tar.gz ~/Projects/OpenMPI
+	tar -xzf openmpi-3.1.2.tar.gz
+	rm openmpi-3.1.2.tar.gz
+
+3. Run MPI Configuration
+
+	cd ~/Projects/OpenMPI
+	./configure
+
+4. Build OpenMPI - this will take a while.
+
+	sudo make all install
+
+5. Run this config (https://askubuntu.com/questions/738667/problem-with-mpicc)
+
+	sudo ldconfig
+
+6. Test the installation was successful
+
+	mpiexec --version
+
