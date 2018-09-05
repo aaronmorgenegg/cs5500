@@ -1,8 +1,8 @@
 1. Compile main.cpp
 
-	mpicc main.cpp -lstdc++
+	mpic++ main.cpp
 
-2. Run the program with the appropriate number of processes
+2. Run the program with the appropriate number of processes for your machine
 
 	mpiexec -np 2 ./a.out
 
