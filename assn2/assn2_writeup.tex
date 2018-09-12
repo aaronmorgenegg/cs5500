@@ -16,6 +16,18 @@ OpenMPI Time Bomb Program
 This is a simple time bomb program. To start, process 0 will initialize a timer with a random value. It will pass this timer to a random process, and output this passing to the console. Then, the program loops. While the timer is positive, the process with the timer will decrement it, and pass it to another random process. If it hits zero, the process announces it has blown up and will alert the other processes to end the loop.
 
 \begin{verbatim}
+/*
+Example of Compiling and running code + example output
+
+mpic++ main.cpp
+mpiexec -np 2 a.out
+Lighting the fuse for a 3 second bomb
+Passing the bomb from 0 to 1
+Passing the bomb from 1 to 0
+Passing the bomb from 0 to 1
+1 went KABOOM! Somebody set up us the bomb
+
+*/
 // Time Bomb OpenMPI c++ implementation
 #include <iostream>
 #include <time.h>
