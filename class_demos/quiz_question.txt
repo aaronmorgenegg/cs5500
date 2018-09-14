@@ -1,0 +1,47 @@
+Group w
+
+Making Test Questions
+
+Once the following code is run using 4 processes, what will be the output to the console?
+
+#include <iostream>
+#include <mpi.h>
+
+int main(int argc, char** argv) {
+        MPI_Init(&argc, &argv);
+        int size;
+        MPI_Comm_size(MPI_COMM_WORLD, &size);
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+        int data = 0;
+        if(rank==0)data=42;
+
+        MPI_Bcast(&data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+        std::cout<<"rank: " << rank <<" data:"<<data<<std::endl;
+
+        MPI_Finalize();
+        return 0;
+}
+
+
+A. 
+	rank: 0 data: 42
+	rank: 1 data: 42
+	rank: 2 data: 42
+	rank: 3 data: 42
+B. 
+	rank: 0 data: 42
+	rank: 1 data: 0
+	rank: 2 data: 0
+	rank: 3 data: 0
+	
+C. 
+	rank: 0 data: 0
+	rank: 1 data: 42
+	rank: 2 data: 42
+	rank: 3 data: 42
+	
+D. None of the above
+
