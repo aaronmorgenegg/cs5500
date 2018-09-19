@@ -1,0 +1,5 @@
+Bijection:
+
+	One-to-One(Every element in the domain maps to a single element in the codomain)
+	Onto(Every element in the codomain is mapped to from a element in the domain)
+
