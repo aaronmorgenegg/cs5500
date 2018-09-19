@@ -4,9 +4,20 @@
 #include <mpi.h>
 #include <unistd.h>
 
+const int MAX_INT_SIZE = 1000;
+const int LIST_SIZE = 100;
+
+int * GetUnsortedList(int n){
+	int * list = new int[n];
+	for(int i = 0; i < n; i++){
+		list[i] = rand() % MAX_INT_SIZE;
+	}
+	return list;
+}
+
 void MasterRoutine(){
 	// Code to run if you're the big boss man
-	
+	int * unsorted_list = GetUnsortedList(LIST_SIZE);
 }
 
 void SlaveRoutine(){
