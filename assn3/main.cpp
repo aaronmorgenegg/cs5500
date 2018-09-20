@@ -31,7 +31,6 @@ int * SortList(int * unsorted_list, int list_length){
 int * MergeLists(int ** split_lists, int world_size){
 	int * merged_list = new int[LIST_SIZE];
 	for(int i = 0; i < LIST_SIZE; i++){
-		std::cout <<"Iteration: " << i << std::endl;
 		int min_index = 0;
 		for(int j = 1; j < world_size; j++){
 			if(split_lists[j][0] < split_lists[min_index][0]){
@@ -76,8 +75,18 @@ int main(int argc, char** argv) {
 	MPI_Scatter(unsorted_list, sub_length, MPI_INT, sub_list, sub_length, MPI_INT, 0, MPI_COMM_WORLD);
 
 	SortList(sub_list, sub_length);
+	MPI_Send(sub_list, sub_length, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
-	PrintList(sub_list, sub_length);
+	if(world_rank == 0){
+		int ** sub_lists = new int*[world_size];
+		for(int i = 0; i < world_size; i++){
+			sub_lists[i] = new int[sub_length];
+			MPI_Recv(sub_lists[i], sub_length, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+		int * sorted_list = MergeLists(sub_lists, world_size);
+		std::cout << "Sorted List: " << std::endl;
+		PrintList(sorted_list, LIST_SIZE);
+	}
 
 	// Finalize the MPI environment.
 	MPI_Finalize();
