@@ -16,8 +16,8 @@ int * GetUnsortedList(int n){
 	return list;
 }
 
-void PrintList(int * list){
-	for(int i = 0; i < LIST_SIZE; i++){
+void PrintList(int * list, int list_length){
+	for(int i = 0; i < list_length; i++){
 		std::cout<<list[i]<<",";
 	}
 	std::cout << std::endl;
@@ -47,7 +47,7 @@ int * MergeLists(int ** split_lists, int world_size){
 int * CreateAndPrintList(int world_size){
 	int * unsorted_list = GetUnsortedList(LIST_SIZE);
 	std::cout << "Sorting the following list: " << std::endl;
-	PrintList(unsorted_list);
+	PrintList(unsorted_list, LIST_SIZE);
 	return unsorted_list;
 }
 
@@ -66,18 +66,18 @@ int main(int argc, char** argv) {
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	int sub_number = LIST_SIZE/(world_size);
+	int sub_length = LIST_SIZE/(world_size);
 
 	int * unsorted_list;
 	if(world_rank == 0){
 		unsorted_list = CreateAndPrintList(world_size);
 	}
-	int * sub_list = new int[sub_number];
-	MPI_Scatter(unsorted_list, sub_number, MPI_INT, sub_list, sub_number, MPI_INT, 0, MPI_COMM_WORLD);
+	int * sub_list = new int[sub_length];
+	MPI_Scatter(unsorted_list, sub_length, MPI_INT, sub_list, sub_length, MPI_INT, 0, MPI_COMM_WORLD);
 
-	SortList(sub_list, sub_number);
+	SortList(sub_list, sub_length);
 
-	PrintList(sub_list);
+	PrintList(sub_list, sub_length);
 
 	// Finalize the MPI environment.
 	MPI_Finalize();
