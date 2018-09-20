@@ -28,8 +28,20 @@ int * SortList(int * unsorted_list){
 	return unsorted_list;
 }
 
-int * MergeLists(int ** split_lists){
-	return new int;
+int * MergeLists(int ** split_lists, int world_size){
+	int * merged_list = new int[LIST_SIZE];
+	for(int i = 0; i < LIST_SIZE; i++){
+		std::cout <<"Iteration: " << i << std::endl;
+		int min_index = 0;
+		for(int j = 1; j < world_size; j++){
+			if(split_lists[j][0] < split_lists[min_index][0]){
+				min_index = j;
+			}
+		}
+		merged_list[i] = split_lists[min_index][0];
+		split_lists[min_index]+=1;
+	}
+	return merged_list;
 }
 
 void MasterRoutine(int world_size){
@@ -41,12 +53,17 @@ void MasterRoutine(int world_size){
 		MPI_Send(&unsorted_list, LIST_SIZE/(world_size-1), MPI_INT, i, 0, MPI_COMM_WORLD);
 		unsorted_list += LIST_SIZE/(world_size-1);
 	}
-	int ** split_lists = new int *;
+	int ** split_lists = new int*[world_size-1];
+	for(int i = 0; i < world_size-1; i++){
+		split_lists[i] = new int[LIST_SIZE/(world_size-1)];
+	}
 	// Wait to receive the split lists
-	for(int i = 1; i < world_size; i++){
+	for(int i = 0; i < world_size-1; i++){
 		MPI_Recv(split_lists[i], LIST_SIZE/(world_size-1), MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
-	int * sorted_list = MergeLists(split_lists);
+	std::cout<<"check"<<std::endl;
+	PrintList(split_lists[0]);
+	int * sorted_list = MergeLists(split_lists, world_size);
 	std::cout << "Sorted list: " << std::endl;
 	PrintList(sorted_list);
 }
