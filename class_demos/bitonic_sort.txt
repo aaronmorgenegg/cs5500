@@ -1,0 +1,14 @@
+Bitonic Sorting
+---------------
+
+Bitonic List : 1 mininum, 1 maximum
+[12,6,3,5,8,10,20,19,18]
+  d d d u u  u  u  d  d
+      min      max
+
+simplify with following rules:
+list length = 2 ^ j
+one max at 2 ^ j-1
+
+
+
