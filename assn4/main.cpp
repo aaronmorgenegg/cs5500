@@ -4,6 +4,7 @@
 #include <mpi.h>
 #include <unistd.h>
 #include <algorithm>
+#include <math.h>
 
 int * getBitonicList(int size){ // Create a bitonic list of given size
 	// CAUTION : designed to work with size=power of 2
@@ -32,7 +33,8 @@ void print1per(int data, int rank, int size){ // Print 1 per function from class
 	int *dArray = new int [size];
 	MPI_Gather(&data,1,MPI_INT,dArray,1,MPI_INT,0,MPI_COMM_WORLD);
 	if(rank==0){
-		printList(darray, size);
+		std::cout << "Sorted List: " << std::endl;
+		printList(dArray, size);
 	}
 	return;
 }
@@ -53,6 +55,25 @@ int cube(int i, int sendData){ // Cube function from class
 	return recvData;
 }
 
+void bitonicSort(int world_size, int world_rank, int list_size){
+	int * list = new int[list_size];
+	if(world_rank==0) {
+		list = getBitonicList(list_size);
+		std::cout << "Unsorted List: " << std::endl;
+		printList(list, list_size);
+		for(int i = 0; i < world_size; i++){
+			MPI_Send(&list[i],1,MPI_INT,i,0,MPI_COMM_WORLD);
+		}
+	}
+	int recv_data;
+	MPI_Recv(&recv_data,1,MPI_INT,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+	for(int i = 0; i < 3; i++){
+		recv_data = cube(i, recv_data);
+	}
+	MPI_Send(&recv_data,1,MPI_INT,0,0,MPI_COMM_WORLD);
+	print1per(recv_data, world_rank, list_size);
+}
+
 int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	srand(time(NULL));
@@ -61,8 +82,7 @@ int main(int argc, char** argv) {
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	int * list = getBitonicList(8);
-	printList(list, 8);
+	bitonicSort(world_size, world_rank, world_size);
 
 	MPI_Finalize();
 	return 0;
