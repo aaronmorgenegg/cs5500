@@ -53,8 +53,12 @@ int cube(int i, int sendData){ // Cube function from class
 	dest = rank ^ mask;
 	MPI_Send(&sendData,1,MPI_INT,dest,0,MPI_COMM_WORLD);
 	MPI_Recv(&recvData,1,MPI_INT,dest,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-
-	return recvData;
+	if(rank < dest){
+		if(sendData<recvData) return sendData;
+		return recvData;
+	}
+	if(sendData<recvData) return recvData;
+	return sendData;
 }
 
 void bitonicSort(int world_size, int world_rank, int list_size){
