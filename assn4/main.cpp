@@ -12,10 +12,12 @@ int * getBitonicList(int size){ // Create a bitonic list of given size
 	int value = size/2;
 	for(int i = 0; i < size; i++){
 		list[i] = value;
-		if(value == 1){
-			value = size;
-		} else{
+		if(i == size/2-1){
+			value = size/2-1;
+		} else if(i >= size/2){
 			value--;
+		} else{
+			value++;
 		}
 	}
 	return list;
