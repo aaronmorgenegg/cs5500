@@ -8,11 +8,9 @@
 #include <math.h>
 #include <string>
 
-const double RE0 = 0.0;
-const double IM0 = 0.0;
-const double RE1 = 0.0;
 const int MAX_ITERATION = 1000;
 const int RESOLUTION = 512;
+const bool INVERT_COLORS = false;
 const std::string OUTPUT_FILE = "serial_mandelbrot.ppm";
 
 struct Color{
@@ -31,9 +29,14 @@ public:
 };
 
 Color getColor(int iteration){
-	int r = iteration%255;
-	int g = iteration%255;
+	int r = iteration%145;
+	int g = iteration%200;
 	int b = iteration%255;
+	if(INVERT_COLORS){
+		r = 255 - r;
+		g = 255 - g;
+		b = 255 - b;
+	}
 	return Color(r,g,b);
 }
 
@@ -52,8 +55,8 @@ void plotImage(Color plot[][RESOLUTION], std::ofstream &mandelbrot_file){
 }
 
 Color calculatePixel(int px, int py){
-	double x0 = px;
-	double y0 = py;
+	double x0 = -2.5 + px * (3.5/RESOLUTION);
+	double y0 = -2 + py * (3.5/RESOLUTION);
 	double x = 0.0;
 	double y = 0.0;
 	int iteration = 0;
@@ -70,7 +73,7 @@ void mandelbrot(std::ofstream &mandelbrot_file){
 	Color plot[RESOLUTION][RESOLUTION];
 	for(int i = 0; i < RESOLUTION; i++){
 		for(int j = 0; j < RESOLUTION; j++){
-			plot[i][j] = calculatePixel(i, j);
+			plot[i][j] = calculatePixel(j, i);
 		}
 	}
 	plotImage(plot, mandelbrot_file);
