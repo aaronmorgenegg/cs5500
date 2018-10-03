@@ -11,7 +11,7 @@
 const int MAX_ITERATION = 1000;
 const int RESOLUTION = 512;
 const bool INVERT_COLORS = false;
-const std::string OUTPUT_FILE = "serial_mandelbrot.ppm";
+const std::string OUTPUT_FILE = "parallel_mandelbrot.ppm";
 
 struct Color{
 public:
@@ -87,6 +87,15 @@ std::ofstream setupFile(){
 	return mandelbrot_file;
 }
 
+void masterRoutine(){
+	std::ofstream mandelbrot_file = setupFile();
+	mandelbrot(mandelbrot_file);
+	mandelbrot_file.close();
+}
+
+void slaveRoutine(){
+
+}
 
 int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
@@ -97,9 +106,9 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
 	if(world_rank == 0){
-		std::ofstream mandelbrot_file = setupFile();
-		mandelbrot(mandelbrot_file);
-		mandelbrot_file.close();
+		masterRoutine();
+	} else{
+		slaveRoutine();
 	}
 	MPI_Finalize();
 	return 0;
