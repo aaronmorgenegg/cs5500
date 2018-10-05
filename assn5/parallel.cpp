@@ -9,7 +9,7 @@
 #include <string>
 
 const int MAX_ITERATION = 1000;
-const int RESOLUTION = 2048;
+const int RESOLUTION = 512;
 const bool INVERT_COLORS = false;
 const std::string OUTPUT_FILE = "parallel_mandelbrot.ppm";
 
@@ -52,11 +52,12 @@ void writeToFile(std::string message, std::ofstream &mandelbrot_file){
 	mandelbrot_file << message;	
 }
 
-void plotImage(Color** plot){
+void plotImage(int** plot){
 	std::ofstream mandelbrot_file = setupFile();
 	for(int i = 0; i < RESOLUTION; i++){
 		for(int j = 0; j < RESOLUTION; j++){
-			std::string color = std::to_string(plot[i][j].r) + " " + std::to_string(plot[i][j].g) + " " + std::to_string(plot[i][j].b) + " ";
+			Color c = getColor(plot[i][j]);
+			std::string color = std::to_string(c.r) + " " + std::to_string(c.g) + " " + std::to_string(c.b) + " ";
 			writeToFile(color, mandelbrot_file);
 		}
 		writeToFile("\n", mandelbrot_file);
@@ -64,7 +65,7 @@ void plotImage(Color** plot){
 	mandelbrot_file.close();
 }
 
-Color calculatePixel(int px, int py){
+int calculatePixel(int px, int py){
 	double x0 = -2 + px * (2.5/RESOLUTION);
 	double y0 = -1.25 + py * (2.5/RESOLUTION);
 	double x = 0.0;
@@ -76,32 +77,43 @@ Color calculatePixel(int px, int py){
 		x = xtemp;
 		iteration += 1;
 	}
-	return getColor(iteration);
+	return iteration;
 }
 
-Color ** initPlot(){
-	Color ** plot = new Color*[RESOLUTION];
-	for(int i = 0; i < RESOLUTION; i++){
-		plot[i] = new Color[RESOLUTION];
+int ** initPlot(int size){
+	int ** plot = new int*[size];
+	for(int i = 0; i < size; i++){
+		plot[i] = new int[size];
 	}
 	return plot;
 }
 
-void mandelbrot(){
-	Color ** plot = initPlot();
+void mandelbrot(int world_size, int world_rank){
+	int offset = RESOLUTION/world_size;
+	int ** plot = initPlot(offset);
+	for(int i = 0; i < RESOLUTION; i+=world_size){
+		for(int j = 0; j < offset; j++){
+			plot[i][j] = calculatePixel(j, i+world_rank);
+		}
+	}
+	std::cout<<world_rank<<std::endl;
+	MPI_Send(&plot,offset*offset,MPI_INT,0,0,MPI_COMM_WORLD);
+	std::cout<<world_rank<<std::endl;
+}
+
+void gatherAndPlot(int world_size){
+	int *** plots = new int**[world_size];
+	int offset = RESOLUTION/world_size;
+	for(int i = 0; i < world_size; i++){
+		MPI_Recv(&plots[i],offset,MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+	}
+	int ** plot = initPlot(RESOLUTION);
 	for(int i = 0; i < RESOLUTION; i++){
 		for(int j = 0; j < RESOLUTION; j++){
-			plot[i][j] = calculatePixel(j, i);
+			plot[i][j] = plots[j%world_size][i][j];
 		}
 	}
 	plotImage(plot);
-}
-
-void masterRoutine(){
-	mandelbrot();
-}
-
-void slaveRoutine(){
 
 }
 
@@ -113,11 +125,8 @@ int main(int argc, char** argv) {
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-	if(world_rank == 0){
-		masterRoutine();
-	} else{
-		slaveRoutine();
-	}
+	mandelbrot(world_size, world_rank);
+	if(world_rank == 0) gatherAndPlot(world_size);
 	MPI_Finalize();
 	return 0;
 }
