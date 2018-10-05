@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <math.h>
 #include <string>
+#include <vector>
 
 const int MAX_ITERATION = 1000;
 const int RESOLUTION = 512;
@@ -52,11 +53,11 @@ void writeToFile(std::string message, std::ofstream &mandelbrot_file){
 	mandelbrot_file << message;	
 }
 
-void plotImage(int** plot){
+void plotImage(std::vector<int> plot){
 	std::ofstream mandelbrot_file = setupFile();
 	for(int i = 0; i < RESOLUTION; i++){
 		for(int j = 0; j < RESOLUTION; j++){
-			Color c = getColor(plot[i][j]);
+			Color c = getColor(plot[i+j]);
 			std::string color = std::to_string(c.r) + " " + std::to_string(c.g) + " " + std::to_string(c.b) + " ";
 			writeToFile(color, mandelbrot_file);
 		}
@@ -80,24 +81,21 @@ int calculatePixel(int px, int py){
 	return iteration;
 }
 
-int ** initPlot(int size){
-	int ** plot = new int*[size];
-	for(int i = 0; i < size; i++){
-		plot[i] = new int[size];
-	}
+std::vector<int> initPlot(int size){
+	std::vector<int> plot(size*size,0);
 	return plot;
 }
 
 void mandelbrot(int world_size, int world_rank){
 	int offset = RESOLUTION/world_size;
-	int ** plot = initPlot(offset);
+	std::vector<int> plot = initPlot(offset);
 	for(int i = 0; i < offset; i++){
 		for(int j = 0; j < offset; j++){
-			plot[i][j] = calculatePixel(j, i*(world_size)+world_rank);
+			plot[i+j] = calculatePixel(j, i*(world_size)+world_rank);
 		}
 	}
-	int ** recv_data = initPlot(RESOLUTION);
-	MPI_Gather(&plot,offset*offset,MPI_INT,&recv_data,offset*offset,MPI_INT,0,MPI_COMM_WORLD);
+	std::vector<int> recv_data = initPlot(RESOLUTION);
+	MPI_Gather(&plot[0],offset*offset,MPI_INT,&recv_data[0],offset*offset,MPI_INT,0,MPI_COMM_WORLD);
 	if(world_rank==0) plotImage(plot);
 }
 
