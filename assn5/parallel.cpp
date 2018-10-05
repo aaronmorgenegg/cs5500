@@ -57,7 +57,7 @@ void plotImage(std::vector<int> plot){
 	std::ofstream mandelbrot_file = setupFile();
 	for(int i = 0; i < RESOLUTION; i++){
 		for(int j = 0; j < RESOLUTION; j++){
-			Color c = getColor(plot[i+j]);
+			Color c = getColor(plot[i*RESOLUTION+j]);
 			std::string color = std::to_string(c.r) + " " + std::to_string(c.g) + " " + std::to_string(c.b) + " ";
 			writeToFile(color, mandelbrot_file);
 		}
@@ -88,14 +88,15 @@ std::vector<int> initPlot(int size){
 
 void mandelbrot(int world_size, int world_rank){
 	int offset = RESOLUTION/world_size;
-	std::vector<int> plot = initPlot(offset);
-	for(int i = 0; i < offset; i++){
-		for(int j = 0; j < offset; j++){
-			plot[i+j] = calculatePixel(j, i*(world_size)+world_rank);
+	std::vector<int> plot = initPlot(RESOLUTION);
+	int start = world_rank*offset;
+	for(int i = start; i < start+offset; i++){
+		for(int j = 0; j < RESOLUTION; j++){
+			plot[i*RESOLUTION+j] = calculatePixel(j, i);
 		}
 	}
 	std::vector<int> recv_data = initPlot(RESOLUTION);
-	MPI_Gather(&plot[0],offset*offset,MPI_INT,&recv_data[0],offset*offset,MPI_INT,0,MPI_COMM_WORLD);
+	MPI_Gather(&plot[0],RESOLUTION*offset,MPI_INT,&recv_data[0],RESOLUTION*offset,MPI_INT,0,MPI_COMM_WORLD);
 	if(world_rank==0) plotImage(plot);
 }
 
