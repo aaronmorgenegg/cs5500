@@ -97,7 +97,7 @@ void mandelbrot(int world_size, int world_rank){
 		}
 	}
 	int ** recv_data = initPlot(RESOLUTION);
-	MPI_Gather(&plot,offset*offset,MPI_INT,&recv_data,RESOLUTION*RESOLUTION,MPI_INT,0,MPI_COMM_WORLD);
+	MPI_Gather(&plot,offset*offset,MPI_INT,&recv_data,offset*offset,MPI_INT,0,MPI_COMM_WORLD);
 	if(world_rank==0) plotImage(plot);
 }
 
@@ -111,7 +111,6 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
 	mandelbrot(world_size, world_rank);
-	if(world_rank == 0) gatherAndPlot(world_size);
 	MPI_Finalize();
 	return 0;
 }
