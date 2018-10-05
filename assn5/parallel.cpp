@@ -82,7 +82,7 @@ int calculatePixel(int px, int py){
 }
 
 std::vector<int> initPlot(int size){
-	std::vector<int> plot(size*size,0);
+	std::vector<int> plot(size*RESOLUTION,0);
 	return plot;
 }
 
@@ -95,9 +95,13 @@ void mandelbrot(int world_size, int world_rank){
 			plot[i*RESOLUTION+j] = calculatePixel(j, i);
 		}
 	}
-	std::vector<int> recv_data = initPlot(RESOLUTION);
-	MPI_Gather(&plot[0],RESOLUTION*offset,MPI_INT,&recv_data[0],RESOLUTION*offset,MPI_INT,0,MPI_COMM_WORLD);
-	if(world_rank==0) plotImage(plot);
+	if(world_rank==0){
+		std::vector<int> recv_data = initPlot(RESOLUTION);
+		MPI_Gather(&plot[start*RESOLUTION],RESOLUTION*offset,MPI_INT,&recv_data.front(),RESOLUTION*offset,MPI_INT,0,MPI_COMM_WORLD);
+		plotImage(recv_data);
+	} else{
+		MPI_Gather(&plot[start*RESOLUTION],RESOLUTION*offset,MPI_INT,NULL,RESOLUTION*offset,MPI_INT,0,MPI_COMM_WORLD);
+	}
 }
 
 
