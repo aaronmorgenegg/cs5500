@@ -91,31 +91,16 @@ int ** initPlot(int size){
 void mandelbrot(int world_size, int world_rank){
 	int offset = RESOLUTION/world_size;
 	int ** plot = initPlot(offset);
-	for(int i = 0; i < RESOLUTION; i+=world_size){
+	for(int i = 0; i < offset; i++){
 		for(int j = 0; j < offset; j++){
-			plot[i][j] = calculatePixel(j, i+world_rank);
+			plot[i][j] = calculatePixel(j, i*(world_size)+world_rank);
 		}
 	}
-	std::cout<<world_rank<<std::endl;
-	MPI_Send(&plot,offset*offset,MPI_INT,0,0,MPI_COMM_WORLD);
-	std::cout<<world_rank<<std::endl;
+	int ** recv_data = initPlot(RESOLUTION);
+	MPI_Gather(&plot,offset*offset,MPI_INT,&recv_data,RESOLUTION*RESOLUTION,MPI_INT,0,MPI_COMM_WORLD);
+	if(world_rank==0) plotImage(plot);
 }
 
-void gatherAndPlot(int world_size){
-	int *** plots = new int**[world_size];
-	int offset = RESOLUTION/world_size;
-	for(int i = 0; i < world_size; i++){
-		MPI_Recv(&plots[i],offset,MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-	}
-	int ** plot = initPlot(RESOLUTION);
-	for(int i = 0; i < RESOLUTION; i++){
-		for(int j = 0; j < RESOLUTION; j++){
-			plot[i][j] = plots[j%world_size][i][j];
-		}
-	}
-	plotImage(plot);
-
-}
 
 int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
