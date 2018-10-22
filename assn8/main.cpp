@@ -9,6 +9,8 @@
 #include <string>
 #include <vector>
 
+const int RESOLUTION = 1024;
+
 int main(int argc, char** argv) {
 	MPI_Init(&argc, &argv);
 	srand(time(NULL));
