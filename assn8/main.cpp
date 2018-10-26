@@ -9,9 +9,9 @@
 #include <string>
 #include <vector>
 
-const int RESOLUTION = 1024; // size of array, 2d so it's squared
+const int RESOLUTION = 128; // size of array, 2d so it's squared
 const int PROPORTION = 20; // % of squares initially alive
-const int DAYS = 10;
+const int DAYS = 100;
 // If true, set each cell randomly according to proportion
 // If false, start with an empty world, with a glider in the center.
 const bool RANDOM_MODE = false;
@@ -37,11 +37,12 @@ std::vector<int> initArray(int size, int proportion){
 std::vector <int> initGlider(int size){
 	// Return an empty array, with a glider in the center.
 	std::vector<int> plot = getEmptyArray(size);
-	plot[512*RESOLUTION + 511] = 1;
-	plot[512*RESOLUTION + 512] = 1;
-	plot[512*RESOLUTION + 513] = 1;
-	plot[511*RESOLUTION + 513] = 1;
-	plot[510*RESOLUTION + 512] = 1;
+	int midpoint = size/2;
+	plot[midpoint*RESOLUTION + midpoint-1] = 1;
+	plot[midpoint*RESOLUTION + midpoint] = 1;
+	plot[midpoint*RESOLUTION + midpoint+1] = 1;
+	plot[(midpoint-1)*RESOLUTION + midpoint+1] = 1;
+	plot[(midpoint-2)*RESOLUTION + midpoint] = 1;
 	return plot;
 }
 
@@ -65,37 +66,44 @@ std::vector<int> gatherArray(int world_rank, int world_size, std::vector<int> pl
 	return plot;
 }
 
+int getRelativeCellValue(int index, std::vector<int> plot, int i_diff, int j_diff){
+	try{
+		return plot.at(index+(i_diff*RESOLUTION)+j_diff);
+	}
+	catch (...){
+		return 0;
+	}
+}
+
 int countNeighbours(int index, std::vector<int> plot){
 	int count = 0;
-	int i = index / RESOLUTION;
-	int j = index % RESOLUTION;
-	if(j > 1 && i > 1 && plot[i*(RESOLUTION-1)+j-1]) count++;
-	if(i > 1 && plot[i*(RESOLUTION-1)+j]) count++;
-	if(j < RESOLUTION-2 && i > 1 && plot[i*(RESOLUTION-1)+j+1]) count++;
-	if(j > 1 && plot[i*(RESOLUTION)+j-1]) count++;
-	if(j < RESOLUTION-2 && plot[i*(RESOLUTION)+j+1]) count++;
-	if(j > 1 && i < RESOLUTION-2 && plot[i*(RESOLUTION+1)+j-1]) count++;
-	if(i < RESOLUTION-2 && plot[i*(RESOLUTION+1)+j]) count++;
-	if(j < RESOLUTION-2 && i < RESOLUTION-2 && plot[i*(RESOLUTION+1)+j+1]) count++;
+	count += getRelativeCellValue(index, plot, -1, -1);
+	count += getRelativeCellValue(index, plot, -1, 0);
+	count += getRelativeCellValue(index, plot, -1, 1);
+	count += getRelativeCellValue(index, plot, 0, -1);
+	count += getRelativeCellValue(index, plot, 0, 1);
+	count += getRelativeCellValue(index, plot, 1, -1);
+	count += getRelativeCellValue(index, plot, 1, 0);
+	count += getRelativeCellValue(index, plot, 1, 1);
 	return count;
 }
 
 int updateCell(int index, std::vector<int> plot){
 	int value = plot[index];
 	int neighbours = countNeighbours(index, plot);
-	if(value == 0){
-		if(neighbours == 3){
-			return 1;
-		}
-	} else{
-		if(neighbours < 2){
-			return 0;
-		}
-		if(neighbours > 3){
-			return 0;
-		}
+	if(neighbours != 0) std::cout << neighbours << std::endl;
+	if(neighbours == 3){
+		return 1;
 	}
-	return value;
+	else if(neighbours == 2){
+		return value;
+	}
+	else if(neighbours < 2){
+		return 0;
+	}
+	else if(neighbours > 3){
+		return 0;
+	}
 }
 
 std::vector<int> updateSubPlot(std::vector<int> plot, int start_index, int chunk_size){
