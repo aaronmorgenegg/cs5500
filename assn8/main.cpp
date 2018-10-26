@@ -11,7 +11,11 @@
 
 const int RESOLUTION = 1024; // size of array, 2d so it's squared
 const int PROPORTION = 20; // % of squares initially alive
-const int DAYS = 100;
+const int DAYS = 10;
+// If true, set each cell randomly according to proportion
+// If false, start with an empty world, with a glider in the center.
+const bool RANDOM_MODE = false;
+const std::string FILE_ROOT = "output/day_"; // Root filename for image output
 
 std::vector<int> getEmptyArray(int size){
 	// 2d array represented by 1d array
@@ -27,6 +31,17 @@ std::vector<int> initArray(int size, int proportion){
 			plot[i] = 1;
 		}
 	}
+	return plot;
+}
+
+std::vector <int> initGlider(int size){
+	// Return an empty array, with a glider in the center.
+	std::vector<int> plot = getEmptyArray(size);
+	plot[512*RESOLUTION + 511] = 1;
+	plot[512*RESOLUTION + 512] = 1;
+	plot[512*RESOLUTION + 513] = 1;
+	plot[511*RESOLUTION + 513] = 1;
+	plot[510*RESOLUTION + 512] = 1;
 	return plot;
 }
 
@@ -65,19 +80,19 @@ int countNeighbours(int index, std::vector<int> plot){
 	return count;
 }
 
-bool updateCell(int index, std::vector<int> plot){
-	bool value = plot[index];
+int updateCell(int index, std::vector<int> plot){
+	int value = plot[index];
 	int neighbours = countNeighbours(index, plot);
-	if(value == false){
+	if(value == 0){
 		if(neighbours == 3){
-			return true;
+			return 1;
 		}
 	} else{
 		if(neighbours < 2){
-			return false;
+			return 0;
 		}
 		if(neighbours > 3){
-			return false;
+			return 0;
 		}
 	}
 	return value;
@@ -94,6 +109,7 @@ std::vector<int> updateSubPlot(std::vector<int> plot, int start_index, int chunk
 std::vector<int> setupPlot(int world_rank, int world_size){
 	if(world_rank == 0){
 		std::vector<int> plot = initArray(RESOLUTION, PROPORTION);
+		if(!RANDOM_MODE) plot = initGlider(RESOLUTION);
 		sendPlot(plot, world_size);
 		return plot;
 	} else{
@@ -103,9 +119,27 @@ std::vector<int> setupPlot(int world_rank, int world_size){
 	}
 }
 
+void saveWorld(std::vector<int> world, int day){
+	std::string filename = FILE_ROOT + std::to_string(day) + ".ppm";
+	std::ofstream my_file(filename);
+        my_file << "P1" << std::endl;
+        my_file << RESOLUTION << " " << RESOLUTION << std::endl;
+	for(int i = 0; i < RESOLUTION; i++){
+                for(int j = 0; j < RESOLUTION; j++){
+                        my_file << world[i*RESOLUTION+j] << " ";
+                }
+                my_file << "\n";
+        }
+        my_file.close();
+}
+
 void gameOfLife(int world_rank, int world_size){
 	std::vector<int> plot = setupPlot(world_rank, world_size);
 	for(int i = 0; i < DAYS; i++){
+		if(world_rank==0){
+			std::cout << "Day " << i << std::endl;
+		       	saveWorld(plot, i);
+		}
 		// divide work between processes
 		int chunk_size = RESOLUTION*RESOLUTION/world_size;
 		int start_index = world_rank * chunk_size;
