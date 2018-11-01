@@ -19,7 +19,8 @@
 
 const int MAX_WORK_SIZE = 1024; // Note: sleep work is in ms
 const int MAX_JOB_QUEUE_SIZE = 16;
-const int WORK_TO_GENERATE = 1024;
+const int WORK_TO_GENERATE = 100;
+const int JOB_GENERATE_RATE = 3;
 const int VERBOSITY = 3;
 
 int getJob(){
@@ -69,10 +70,12 @@ void distributeWork(std::vector<int> &job_queue, int world_size, int world_rank)
 }
 
 void generateNewWork(int jobs_to_spawn, int &spawned_jobs, std::vector<int> &job_queue, int world_rank){
-	if(spawned_jobs < jobs_to_spawn){
-		if(VERBOSITY>2) std::cout<<"p"<<world_rank<<": spawning additional job"<<std::endl;
-		spawned_jobs++;
-		job_queue.push_back(getJob());
+	for(int i = 0; i < JOB_GENERATE_RATE; i++){
+		if(spawned_jobs < jobs_to_spawn){
+			if(VERBOSITY>2) std::cout<<"p"<<world_rank<<": spawning additional job"<<std::endl;
+			spawned_jobs++;
+			job_queue.push_back(getJob());
+		}
 	}
 }
 
@@ -86,7 +89,7 @@ void loadBalance(int world_rank, int world_size){
 	MPI_Request my_request;
 	MPI_Status my_status;
 
-	while(1){
+	while(spawned_jobs<jobs_to_spawn || job_queue.size()!=0){
 		receiveNewJobs(new_job, my_request, job_flag, my_status, world_rank, job_queue);
 		distributeWork(job_queue, world_size, world_rank);
 		doWork(job_queue, world_rank);
