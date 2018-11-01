@@ -23,6 +23,7 @@ const int MAX_JOB_QUEUE_SIZE = 16;
 const int WORK_TO_GENERATE = 1024;
 const int JOB_GENERATE_RATE = 2;
 const int VERBOSITY = 2; // Set from 0-3
+const int MAX_ITERATIONS = 10000;
 
 int getJob(){
 	return rand()%MAX_WORK_SIZE+1;
@@ -53,6 +54,7 @@ void doWork(std::vector<int> &job_queue, int world_rank, int &jobs_performed){
 		job_queue.erase(job_queue.begin());
 		jobs_performed++;
 	} else {
+		usleep(10);
 		return;
 	}
 }
@@ -139,7 +141,8 @@ void loadBalance(int world_rank, int world_size){
 	int token_flag;
 	bool terminate = false;
 
-	while(!terminate){
+	int counter = 0;
+	while(!terminate and counter++ < MAX_ITERATIONS){
 		receiveNewJobs(new_job, my_request, job_flag, my_status, world_rank, job_queue);
 		distributeWork(job_queue, world_size, world_rank, process_color);
 		doWork(job_queue, world_rank, jobs_performed);
