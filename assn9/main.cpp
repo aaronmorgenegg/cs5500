@@ -22,7 +22,7 @@ const int MAX_WORK_SIZE = 1024; // Note: sleep work is in ms
 const int MAX_JOB_QUEUE_SIZE = 16;
 const int WORK_TO_GENERATE = 1024;
 const int JOB_GENERATE_RATE = 2;
-const int VERBOSITY = 3;
+const int VERBOSITY = 2; // Set from 0-3
 
 int getJob(){
 	return rand()%MAX_WORK_SIZE+1;
@@ -33,6 +33,8 @@ void initWork(int world_rank){
 	if(world_rank == 0){
 		int job = getJob();
 		MPI_Send(&job,1,MPI_INT,0,JOB,MCW);
+		int token = BLACK;
+		MPI_Send(&token,1,MPI_INT,0,TOKEN,MCW);
 	}
 }
 
@@ -41,12 +43,12 @@ void receiveNewJobs(int new_job, MPI_Request my_request, int job_flag, MPI_Statu
 	MPI_Test(&my_request,&job_flag,&my_status);
 	if(!job_flag) return;
 	job_queue.push_back(new_job);
-	if(VERBOSITY > 1) std::cout<<"p"<<world_rank<<": received job "<<new_job<<std::endl;
+	if(VERBOSITY > 2) std::cout<<"p"<<world_rank<<": received job "<<new_job<<std::endl;
 }
 
 void doWork(std::vector<int> &job_queue, int world_rank, int &jobs_performed){
 	if(job_queue.size() > 0){
-		if(VERBOSITY>2) std::cout<<"p"<<world_rank<<": doing job"<<job_queue[0]<<std::endl;
+		if(VERBOSITY>1) std::cout<<"p"<<world_rank<<": doing job"<<job_queue[0]<<std::endl;
 		usleep(job_queue[0]);
 		job_queue.erase(job_queue.begin());
 		jobs_performed++;
@@ -89,6 +91,7 @@ void checkTerminate(bool &terminate, int signal, MPI_Request my_request, int ter
 	MPI_Irecv(&signal,1,MPI_INT,0,TERMINATE,MCW,&my_request);
 	MPI_Test(&my_request,&terminate_flag,&my_status);
 	if(!terminate_flag) return;
+	if(VERBOSITY > 1) std::cout<<"received terminate signal"<<std::endl;
 	terminate = true;	
 }
 
@@ -142,7 +145,7 @@ void loadBalance(int world_rank, int world_size){
 		doWork(job_queue, world_rank, jobs_performed);
 		generateNewWork(jobs_to_spawn, spawned_jobs, job_queue, world_rank);
 		handleToken(token, my_request, token_flag, my_status, process_color, world_rank, world_size, job_queue);
-		checkTerminate(terminate, signal, my_request, terminate_flag, my_status);
+		checkTerminate(terminate, terminate_signal, my_request, terminate_flag, my_status);
 	}
 	if(VERBOSITY>0)std::cout<<"p"<<world_rank<<": finished. Jobs completed: "<<jobs_performed<<std::endl;
 }
