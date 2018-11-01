@@ -1,0 +1,12 @@
+Can do either a presentation or a paper
+
+Should be about as complex as a homework assignment
+
+Structure:
+
+	Introduction:
+	Experiment:
+	Present Data:
+	Analysis:
+	Conclusion:
+
