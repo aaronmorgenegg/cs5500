@@ -1,8 +1,22 @@
-
 #include <iostream>
+#include <fstream>
+#include <time.h>
+#include <stdlib.h>
+#include <mpi.h>
+#include <unistd.h>
+#include <algorithm>
+#include <math.h>
+#include <string>
+#include <vector>
 #include <cmath>
 
+#define MCW MPI_COMM_WORLD
+#define ANY MPI_ANY_SOURCE
+
 using namespace std;
+
+const int TIME_TO_RUN = 10000;
+const int TIME_TO_COMMUNICATE = 1000;
 
 struct City{
     int x;
@@ -56,7 +70,7 @@ void pmx(Genome &g1, Genome &g2){
     if(start>end){ t=start; start=end; end=t; }
     for(int i=start;i<end;++i){
         for(j=0;j<100;++j) if(g1.c[j]==g2.c[i])break;
-        for(k=0;k<100;++k) if(g2.c[j]==g1.c[i])break;
+	for(k=0;k<100;++k) if(g2.c[k]==g1.c[i])break;
         t=g1.c[i]; g1.c[i]=g1.c[j]; g1.c[j]=t;
         t=g2.c[i]; g2.c[i]=g2.c[k]; g2.c[k]=t;
     }
@@ -98,33 +112,45 @@ void mateAndSelect(Genome &g1, Genome &g2, City city[100]){
     
 }
 
-int main(){
+int main(int argc, char** argv) {
+    MPI_Init(&argc, &argv);
+    srand(time(NULL));
+    int world_size;
+    MPI_Comm_size(MCW, &world_size);
+    int world_rank;
+    MPI_Comm_rank(MCW, &world_rank);
+
     
     City city[100];
     Genome g[1000];
     int mate;
     long oldbf=-1;
     long bf;
+    string filename = "process_"+to_string(world_rank);
+    ofstream myfile;
+    myfile.open(filename);
     
     read100(city);
     setupGenome(g,city);
     
-    
-    while(1){
+    int i = 0;
+    while(i < TIME_TO_RUN){
         for(int i=0;i<1000;++i){
             mate=rand()%1000;
             mateAndSelect(g[i],g[mate],city);
         }
         bf=bestFitness(g);
         if(oldbf==-1){
-            cout<<bf<<endl;
+	    myfile<<bf<<endl;
         }else{
             if(bf<oldbf){
                 oldbf=bf;
-                cout<<bf<<endl;
+	        myfile<<bf<<endl;
             }
         }
+	i++;
     }
+    myfile.close();
     
     return 0;
 }
