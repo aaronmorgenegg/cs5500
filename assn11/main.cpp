@@ -40,6 +40,27 @@ std::string generateBinaryString(int length, double regularity){
 	return binary_string;
 }
 
+std::vector<int> computeLPSArray(std::string pattern, int m){
+	std::vector<int> lps(m, 0);
+	int length = 0;
+	int i = 1;
+	while(1 < m){
+		if(pattern[i]==pattern[length]){
+			length++;
+			lps[i] = length;
+			i++;
+		} else{
+			if(length != 0){
+				length = lps[length-1];
+			} else{
+				lps[i] = 0;
+				i++;
+			}
+		}
+	}
+	return lps;
+}
+
 // ----- ALGORITHMS -----
 
 std::vector<int> stringMatchingNaive(std::string text, std::string pattern){
@@ -60,6 +81,37 @@ std::vector<int> stringMatchingNaive(std::string text, std::string pattern){
 	return found_indices;
 }
 
+std::vector<int> stringMatchingKMP(std::string text, std::string pattern){
+	// KMP string matching algorithm with O(n)
+	std::vector<int> found_indices;
+	int n = text.length();
+	int m = pattern.length();
+
+	// precompute prefix/suffic array
+	std::vector<int> lps = computeLPSArray(pattern, m);
+	
+	int i = 0;
+	int j = 0;
+	while(i < n){
+		if(pattern[j]==text[i]){
+			i++;
+			j++;
+		}
+		if(j==m){
+			found_indices.push_back(i-j);
+			j = lps[j-1];
+		}
+		else if(i<n && pattern[j]!=text[i]){
+			if(j!=0){
+				j = lps[j-1];
+			} else{
+				i ++;
+			}
+		}
+	}
+	return found_indices;
+}
+
 // ----- MAIN -----
 
 int main(int argc, char** argv) {
@@ -74,7 +126,7 @@ int main(int argc, char** argv) {
 
 	std::string test_text = generateBinaryString(100, 0.5);
 	std::string test_pat = generateBinaryString(3, 0.5);
-	std::vector<int> sol = stringMatchingNaive(test_text, test_pat);
+	std::vector<int> sol = stringMatchingKMP(test_text, test_pat);
 	std::cout <<test_text<<std::endl;
 	std::cout << test_pat<<std::endl;
 	std::cout <<"Indices found at:"<<std::endl;
