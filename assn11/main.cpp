@@ -44,7 +44,7 @@ std::vector<int> computeLPSArray(std::string pattern, int m){
 	std::vector<int> lps(m, 0);
 	int length = 0;
 	int i = 1;
-	while(1 < m){
+	while(i < m){
 		if(pattern[i]==pattern[length]){
 			length++;
 			lps[i] = length;
