@@ -41,6 +41,7 @@ std::string generateBinaryString(int length, double regularity){
 }
 
 std::vector<int> computeLPSArray(std::string pattern, int m){
+	// Computes the prefix/suffix array for KMP algorithm
 	std::vector<int> lps(m, 0);
 	int length = 0;
 	int i = 1;
@@ -59,6 +60,15 @@ std::vector<int> computeLPSArray(std::string pattern, int m){
 		}
 	}
 	return lps;
+}
+
+std::vector<int> badCharHeuristic(std::string pattern, int size){
+	std::vector<int> bad_char(NUM_CHARS, -1);
+	// Computes bad character array for BM algorithm
+	for(int i = 0; i < size; i++){
+		bad_char[(int)pattern[i]] = i;
+	}
+	return bad_char;
 }
 
 // ----- ALGORITHMS -----
@@ -82,7 +92,7 @@ std::vector<int> stringMatchingNaive(std::string text, std::string pattern){
 }
 
 std::vector<int> stringMatchingKMP(std::string text, std::string pattern){
-	// KMP string matching algorithm with O(n)
+	// Knuth Morris Pratt string matching algorithm with O(n)
 	std::vector<int> found_indices;
 	int n = text.length();
 	int m = pattern.length();
@@ -112,6 +122,34 @@ std::vector<int> stringMatchingKMP(std::string text, std::string pattern){
 	return found_indices;
 }
 
+std::vector<int> stringMatchingBM(std::string text, std::string pattern){
+	// Boyer Moore string matching algorithm with O(nm) in the worst
+	// case, but O(n/m) in the best case
+	std::vector<int> found_indices;
+	int n = text.length();
+	int m = pattern.length();
+
+	std::vector<int> bad_char = badCharHeuristic(pattern, m);
+
+	int s = 0;
+	while(s<=n-m){
+		int j = m - 1;
+		while(j >= 0 && pattern[j] == text[s+j]){
+			j--;
+		}
+		if(j<0){
+			found_indices.push_back(s);
+			if(s+m<n) s += (m-bad_char[(int)text[s+m]]);
+			else s++;
+		} else{
+			int value = (j-bad_char[(int)text[s+j]]);
+			if(value>1) s += value;
+			else s++;
+		}
+	}
+	return found_indices;
+}
+
 // ----- MAIN -----
 
 int main(int argc, char** argv) {
@@ -126,7 +164,7 @@ int main(int argc, char** argv) {
 
 	std::string test_text = generateBinaryString(100, 0.5);
 	std::string test_pat = generateBinaryString(3, 0.5);
-	std::vector<int> sol = stringMatchingKMP(test_text, test_pat);
+	std::vector<int> sol = stringMatchingBM(test_text, test_pat);
 	std::cout <<test_text<<std::endl;
 	std::cout << test_pat<<std::endl;
 	std::cout <<"Indices found at:"<<std::endl;
