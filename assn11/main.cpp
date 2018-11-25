@@ -19,6 +19,10 @@ int BINARY_STRING_LENGTH = 10000000; // Length of binary strings for study
 int MIN_M = 1; // Smallest length of pattern for study
 int MAX_M = 100000; // Largest length of pattern for study
 int NUM_CHARS = 256; // number of characters in the alphabet used
+bool STUDY_BINARY = true; // whether or not to run binary study
+bool STUDY_SHAKESPEARE = true;
+bool STUDY_DNA = true;
+int VERBOSITY = 3;
 
 // ----- UTILITIES -----
 
@@ -69,6 +73,36 @@ std::vector<int> badCharHeuristic(std::string pattern, int size){
 		bad_char[(int)pattern[i]] = i;
 	}
 	return bad_char;
+}
+
+std::string readFileToString(std::string filename){
+	std::ifstream ifs (filename, std::ifstream::in);
+	std::stringstream sstr;
+	sstr << ifs.rdbuf();
+	return sstr.str();
+}
+
+// ----- STUDY -----
+
+void runStudy(int world_rank, int world_size){
+
+}
+
+void runBinaryRandomStudy(){
+	if(VERBOSITY>1) std::cout<<"Generating random binary string..."<<std::endl;
+	std::string binary_random = generateBinaryString(BINARY_STRING_LENGTH, 0.5);
+}
+
+void runBinaryRegularyStudy(){
+
+}
+
+void runShakespeareStudy(){
+
+}
+
+void runDNAStudy(){
+
 }
 
 // ----- ALGORITHMS -----
@@ -161,7 +195,7 @@ int main(int argc, char** argv) {
 	MPI_Comm_rank(MCW, &world_rank);
 	// MPI_Send(&sendData,1,MPI_INT,dest,0,MPI_COMM_WORLD);
         // MPI_Recv(&recvData,1,MPI_INT,dest,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-
+	runStudy(world_rank, world_size)
 	std::string test_text = generateBinaryString(100, 0.5);
 	std::string test_pat = generateBinaryString(3, 0.5);
 	std::vector<int> sol = stringMatchingBM(test_text, test_pat);
