@@ -8,6 +8,7 @@
 #include <math.h>
 #include <string>
 #include <vector>
+#include <chrono>
 #define MCW MPI_COMM_WORLD
 #define ANY MPI_ANY_SOURCE
 
@@ -23,6 +24,10 @@ bool STUDY_BINARY = true; // whether or not to run binary study
 bool STUDY_SHAKESPEARE = true;
 bool STUDY_DNA = true;
 int VERBOSITY = 3;
+int NAIVE = 42;
+int KMP = 44;
+int BM = 61;
+
 
 // ----- UTILITIES -----
 
@@ -85,12 +90,29 @@ std::string readFileToString(std::string filename){
 // ----- STUDY -----
 
 void runStudy(int world_rank, int world_size){
-
+	runBinaryRandomStudy(world_rank, world_size);
+	runBinaryRegularStudy();
+	runShakespeareStudy();
+	runDNAStudy();
 }
 
-void runBinaryRandomStudy(){
-	if(VERBOSITY>1) std::cout<<"Generating random binary string..."<<std::endl;
-	std::string binary_random = generateBinaryString(BINARY_STRING_LENGTH, 0.5);
+void runBinaryRandomStudy(int world_rank, int world_size){
+	std::cout<<"-----Binary Random Study-----"<<std::endl;
+	std::string binary_random;
+	if(world_rank == 0){
+		if(VERBOSITY>1) std::cout<<"Generating random binary string..."<<std::endl;
+		binary_random = generateBinaryString(BINARY_STRING_LENGTH, 0.5);
+		for(int i = 1; i < world_size; i++){
+			MPI_Send(binary_random.c_str(), binary_random.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+		}
+	} else{
+		int size = BINARY_STRING_LENGTH;
+		MPI_Recv(&binary_random, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	for(int i = MIN_M; i < MAX_M; i *= 2){
+		runNaive(binary_random, i, world_rank, world_size);
+	}
+	tallyResults(world_rank, world_size);
 }
 
 void runBinaryRegularyStudy(){
@@ -103,6 +125,27 @@ void runShakespeareStudy(){
 
 void runDNAStudy(){
 
+}
+
+void runNaive(std::string text, int m, int world_rank, int world_size){
+	std::vector<double> study_data;
+	study_data.push_back((double)NAIVE);
+	study_data.push_back((double)m);
+	time_point<Clock> start = Clock::now();
+	int seg_start = (text.length()/world_size)*world_rank;
+	int seg_length = (text.length()/world_size);
+	stringMatchingNaive(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+	time_point<Clock> end = Clock::now();
+	milliseconds time = duration_cast<milliseconds>(end-start);
+	study_data.push_back((double)diff.count());
+	MPI_Send(&study_data[0], 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+}
+
+void tallyResults(int world_rank, int world_size){
+	// If root, gather up timing data, sum and output it
+	// data is sent as an array of floats, [ALGORITHM_CODE, m, time]
+	// TODO
+	
 }
 
 // ----- ALGORITHMS -----
