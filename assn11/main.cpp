@@ -91,9 +91,9 @@ std::string readFileToString(std::string filename){
 
 void runStudy(int world_rank, int world_size){
 	runBinaryRandomStudy(world_rank, world_size);
-	runBinaryRegularStudy();
-	runShakespeareStudy();
-	runDNAStudy();
+	runBinaryRegularStudy(world_rank, world_size);
+	runShakespeareStudy(world_rank, world_size);
+	runDNAStudy(world_rank, world_size);
 }
 
 void runBinaryRandomStudy(int world_rank, int world_size){
@@ -110,31 +110,90 @@ void runBinaryRandomStudy(int world_rank, int world_size){
 		MPI_Recv(&binary_random, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
 	for(int i = MIN_M; i < MAX_M; i *= 2){
-		runNaive(binary_random, i, world_rank, world_size);
+		runAlgorithm(binary_random, i, world_rank, world_size, NAIVE);
+		runAlgorithm(binary_random, i, world_rank, world_size, KMP);
+		runAlgorithm(binary_random, i, world_rank, world_size, BM);
 	}
 	tallyResults(world_rank, world_size);
 }
 
-void runBinaryRegularyStudy(){
-
+void runBinaryRegularyStudy(int world_rank, int world_size){
+	std::cout<<"-----Binary Regular Study-----"<<std::endl;
+	std::string binary_regular;
+	if(world_rank == 0){
+		if(VERBOSITY>1) std::cout<<"Generating regular binary string..."<<std::endl;
+		binary_regular = generateBinaryString(BINARY_STRING_LENGTH, 0.9999);
+		for(int i = 1; i < world_size; i++){
+			MPI_Send(binary_regular.c_str(), binary_regular.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+		}
+	} else{
+		int size = BINARY_STRING_LENGTH;
+		MPI_Recv(&binary_regular, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	for(int i = MIN_M; i < MAX_M; i *= 2){
+		runAlgorithm(binary_regular, i, world_rank, world_size, NAIVE);
+		runAlgorithm(binary_regular, i, world_rank, world_size, KMP);
+		runAlgorithm(binary_regular, i, world_rank, world_size, BM);
+	}
+	tallyResults(world_rank, world_size);
 }
 
-void runShakespeareStudy(){
-
+void runShakespeareStudy(int world_rank, int world_size){
+	std::cout<<"-----Shakespeare Study-----"<<std::endl;
+	std::string shakespeare;
+	if(world_rank == 0){
+		if(VERBOSITY>1) std::cout<<"Reading Shakespeare string from file..."<<std::endl;
+		shakespeare = readFileToString(FILE_SHAKESPEARE);
+		for(int i = 1; i < world_size; i++){
+			MPI_Send(shakespeare.c_str(), shakespeare.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+		}
+	} else{
+		int size = SHAKESPEARE_STRING_LENGTH;
+		MPI_Recv(&shakespeare, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	for(int i = MIN_M; i < MAX_M; i *= 2){
+		runAlgorithm(shakespeare, i, world_rank, world_size, NAIVE);
+		runAlgorithm(shakespeare, i, world_rank, world_size, KMP);
+		runAlgorithm(shakespeare, i, world_rank, world_size, BM);
+	}
+	tallyResults(world_rank, world_size);
 }
 
-void runDNAStudy(){
-
+void runDNAStudy(int world_rank, int world_size){
+	std::cout<<"-----DNA Study-----"<<std::endl;
+	std::string dna;
+	if(world_rank == 0){
+		if(VERBOSITY>1) std::cout<<"Reading dna string from file..."<<std::endl;
+		dna = readFileToString(FILE_DNA);
+		for(int i = 1; i < world_size; i++){
+			MPI_Send(dna.c_str(), dna.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+		}
+	} else{
+		int size = DNA_STRING_LENGTH;
+		MPI_Recv(&dna, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	}
+	for(int i = MIN_M; i < MAX_M; i *= 2){
+		runAlgorithm(dna, i, world_rank, world_size, NAIVE);
+		runAlgorithm(dna, i, world_rank, world_size, KMP);
+		runAlgorithm(dna, i, world_rank, world_size, BM);
+	}
+	tallyResults(world_rank, world_size);
 }
 
-void runNaive(std::string text, int m, int world_rank, int world_size){
+void runAlgorithm(std::string text, int m, int world_rank, int world_size, int alg_code){
 	std::vector<double> study_data;
-	study_data.push_back((double)NAIVE);
+	study_data.push_back((double)alg_code);
 	study_data.push_back((double)m);
 	time_point<Clock> start = Clock::now();
 	int seg_start = (text.length()/world_size)*world_rank;
 	int seg_length = (text.length()/world_size);
-	stringMatchingNaive(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+	if(alg_code == NAIVE){
+		stringMatchingNaive(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+	} else if(alg_code == KMP){
+		stringMatchingKMP(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+	} else if(alg_code == BM){
+		stringMatchingBM(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+	}
 	time_point<Clock> end = Clock::now();
 	milliseconds time = duration_cast<milliseconds>(end-start);
 	study_data.push_back((double)diff.count());
@@ -144,6 +203,7 @@ void runNaive(std::string text, int m, int world_rank, int world_size){
 void tallyResults(int world_rank, int world_size){
 	// If root, gather up timing data, sum and output it
 	// data is sent as an array of floats, [ALGORITHM_CODE, m, time]
+	// if not root, wait until root gives the go signal
 	// TODO
 	
 }
