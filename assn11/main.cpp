@@ -13,12 +13,7 @@
 #define MCW MPI_COMM_WORLD
 #define ANY MPI_ANY_SOURCE
 
-
-using Clock = std::chrono::steady_clock;
-using std::chrono::time_point;
-using std::chrono::duration_cast;
-using std::chrono::milliseconds;
-using namespace std::literals::chrono_literals;
+using namespace std::chrono;
 
 // ----- CONSTANTS -----
 
@@ -182,20 +177,22 @@ void runAlgorithm(std::string text, int m, int world_rank, int world_size, int a
         std::vector<double> study_data;
         study_data.push_back((double)alg_code);
         study_data.push_back((double)m);
-        time_point<Clock> start = Clock::now();
+	high_resolution_clock::time_point start = high_resolution_clock::now();
         int seg_start = (text.length()/world_size)*world_rank;
         int seg_length = (text.length()/world_size);
+	std::vector<int> results;
         if(alg_code == NAIVE){
-                stringMatchingNaive(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+                results = stringMatchingNaive(text.substr(seg_start, seg_length), text.substr(text.length()-m));
         } else if(alg_code == KMP){
-                stringMatchingKMP(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+                results = stringMatchingKMP(text.substr(seg_start, seg_length), text.substr(text.length()-m));
         } else if(alg_code == BM){
-                stringMatchingBM(text.substr(seg_start, seg_length), text.substr(text.length()-m));
+                results = stringMatchingBM(text.substr(seg_start, seg_length), text.substr(text.length()-m));
         }
-        time_point<Clock> end = Clock::now();
-        milliseconds time = duration_cast<milliseconds>(end-start);
-        study_data.push_back((double)time.count());
-        MPI_Send(&study_data[0], 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+	high_resolution_clock::time_point end = high_resolution_clock::now();
+        duration<double> time = duration_cast<duration<double>>(end-start);
+        study_data.push_back(time.count());
+	study_data.push_back(results.size());
+        MPI_Send(&study_data[0], 4, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
 }
 
 void printResults(std::vector<double> time_data, std::string algorithm){
@@ -208,24 +205,23 @@ void printResults(std::vector<double> time_data, std::string algorithm){
 
 void tallyResults(int world_rank, int world_size){
         // If root, gather up timing data, sum and output it
-        // data is sent as an array of floats, [ALGORITHM_CODE, m, time]
+        // data is sent as an array of floats, [ALGORITHM_CODE, m, time, num_matches]
 	if(world_rank == 0){
-	std::cout << "Tallying..." << std::endl;
 	int num_reps = log2(MAX_M);
 	int num_messages = world_size * 3 * num_reps; // num processes * num algorithms * num repetitions(iterations of m)
-	std::vector<double> results;
+	std::vector<double> results(3, 0);
 	std::vector<double> naive_times(num_reps, 0);
 	std::vector<double> kmp_times(num_reps, 0);
 	std::vector<double> bm_times(num_reps, 0);
 	for(int i = 0; i < num_messages; i++){
-		MPI_Recv(&results[0], 3, MPI_DOUBLE, ANY, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(&results[0], 4, MPI_DOUBLE, ANY, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		int index = log2(results[1]);
 		if(results[0] == NAIVE) {
-			naive_times[index] += results[3];
+			naive_times[index] += results[2];
 		} else if(results[0] == KMP){
-			kmp_times[index] += results[3];
+			kmp_times[index] += results[2];
 		} else if(results[0] == BM){
-			bm_times[index] += results[3];
+			bm_times[index] += results[2];
 		}
 	}
 	printResults(naive_times, "naive");
@@ -262,6 +258,8 @@ void runBinaryRandomStudy(int world_rank, int world_size){
 void runBinaryRegularStudy(int world_rank, int world_size){
 	if(world_rank==0)std::cout<<"-----Binary Regular Study-----"<<std::endl;
 	std::string binary_regular;
+	int size = BINARY_STRING_LENGTH;
+	char* buffer = new char[size];
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Generating regular binary string..."<<std::endl;
 		binary_regular = generateBinaryString(BINARY_STRING_LENGTH, 0.9999);
@@ -269,8 +267,9 @@ void runBinaryRegularStudy(int world_rank, int world_size){
 			MPI_Send(binary_regular.c_str(), binary_regular.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
 		}
 	} else{
-		int size = BINARY_STRING_LENGTH;
-		MPI_Recv(&binary_regular, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(buffer, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		binary_regular = std::string(buffer, size);
+		delete [] buffer;
 	}
 	for(int i = MIN_M; i < MAX_M; i *= 2){
 		runAlgorithm(binary_regular, i, world_rank, world_size, NAIVE);
@@ -286,6 +285,7 @@ void runShakespeareStudy(int world_rank, int world_size){
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Reading Shakespeare string from file..."<<std::endl;
 		shakespeare = readFileToString(FILE_SHAKESPEARE);
+		std::cout << shakespeare.size() << std::endl;
 		for(int i = 1; i < world_size; i++){
 			MPI_Send(shakespeare.c_str(), shakespeare.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
 		}
@@ -307,6 +307,7 @@ void runDNAStudy(int world_rank, int world_size){
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Reading dna string from file..."<<std::endl;
 		dna = readFileToString(FILE_DNA1);
+		std::cout << dna.size() << std::endl;
 		for(int i = 1; i < world_size; i++){
 			MPI_Send(dna.c_str(), dna.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
 		}
