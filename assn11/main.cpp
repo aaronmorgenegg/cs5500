@@ -33,7 +33,7 @@ int NUM_CHARS = 256; // number of characters in the alphabet used
 bool STUDY_BINARY = true; // whether or not to run binary study
 bool STUDY_SHAKESPEARE = true;
 bool STUDY_DNA = true;
-int VERBOSITY = 3;
+int VERBOSITY = 1;
 int NAIVE = 42;
 int KMP = 44;
 int BM = 61;
@@ -198,26 +198,58 @@ void runAlgorithm(std::string text, int m, int world_rank, int world_size, int a
         MPI_Send(&study_data[0], 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 }
 
+void printResults(std::vector<double> time_data, std::string algorithm){
+	std::cout << algorithm << " algorithm" << std::endl;
+	int m = 1;
+	for(auto it = time_data.begin(); it != time_data.end(); it++, m*=2){
+		std::cout << "\t" << m << "," << *it << std::endl;
+	}
+}
+
 void tallyResults(int world_rank, int world_size){
         // If root, gather up timing data, sum and output it
         // data is sent as an array of floats, [ALGORITHM_CODE, m, time]
-        // if not root, wait until root gives the go signal
-        // TODO
-
+	if(world_rank == 0){
+	std::cout << "Tallying..." << std::endl;
+	int num_reps = log2(MAX_M);
+	int num_messages = world_size * 3 * num_reps; // num processes * num algorithms * num repetitions(iterations of m)
+	std::vector<double> results;
+	std::vector<double> naive_times(num_reps, 0);
+	std::vector<double> kmp_times(num_reps, 0);
+	std::vector<double> bm_times(num_reps, 0);
+	for(int i = 0; i < num_messages; i++){
+		MPI_Recv(&results[0], 3, MPI_DOUBLE, ANY, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		int index = log2(results[1]);
+		if(results[0] == NAIVE) {
+			naive_times[index] += results[3];
+		} else if(results[0] == KMP){
+			kmp_times[index] += results[3];
+		} else if(results[0] == BM){
+			bm_times[index] += results[3];
+		}
+	}
+	printResults(naive_times, "naive");
+	printResults(kmp_times, "kmp");
+	printResults(bm_times, "bm");
+	}
 }
 
 void runBinaryRandomStudy(int world_rank, int world_size){
-	std::cout<<"-----Binary Random Study-----"<<std::endl;
+	if(world_rank==0)std::cout<<"-----Binary Random Study-----"<<std::endl;
 	std::string binary_random;
+	int size = BINARY_STRING_LENGTH;
+	char* buffer = new char[size];
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Generating random binary string..."<<std::endl;
 		binary_random = generateBinaryString(BINARY_STRING_LENGTH, 0.5);
 		for(int i = 1; i < world_size; i++){
-			MPI_Send(binary_random.c_str(), binary_random.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+			MPI_Send(binary_random.c_str(), size, MPI_CHAR, i, 0, MPI_COMM_WORLD);
 		}
+		delete [] buffer;
 	} else{
-		int size = BINARY_STRING_LENGTH;
-		MPI_Recv(&binary_random, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(buffer, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		binary_random = std::string(buffer, size);
+		delete [] buffer;
 	}
 	for(int i = MIN_M; i < MAX_M; i *= 2){
 		runAlgorithm(binary_random, i, world_rank, world_size, NAIVE);
@@ -228,7 +260,7 @@ void runBinaryRandomStudy(int world_rank, int world_size){
 }
 
 void runBinaryRegularStudy(int world_rank, int world_size){
-	std::cout<<"-----Binary Regular Study-----"<<std::endl;
+	if(world_rank==0)std::cout<<"-----Binary Regular Study-----"<<std::endl;
 	std::string binary_regular;
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Generating regular binary string..."<<std::endl;
@@ -249,7 +281,7 @@ void runBinaryRegularStudy(int world_rank, int world_size){
 }
 
 void runShakespeareStudy(int world_rank, int world_size){
-	std::cout<<"-----Shakespeare Study-----"<<std::endl;
+	if(world_rank==0)std::cout<<"-----Shakespeare Study-----"<<std::endl;
 	std::string shakespeare;
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Reading Shakespeare string from file..."<<std::endl;
@@ -270,7 +302,7 @@ void runShakespeareStudy(int world_rank, int world_size){
 }
 
 void runDNAStudy(int world_rank, int world_size){
-	std::cout<<"-----DNA Study-----"<<std::endl;
+	if(world_rank==0)std::cout<<"-----DNA Study-----"<<std::endl;
 	std::string dna;
 	if(world_rank == 0){
 		if(VERBOSITY>1) std::cout<<"Reading dna string from file..."<<std::endl;
