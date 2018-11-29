@@ -264,8 +264,9 @@ void runBinaryRegularStudy(int world_rank, int world_size){
 		if(VERBOSITY>1) std::cout<<"Generating regular binary string..."<<std::endl;
 		binary_regular = generateBinaryString(BINARY_STRING_LENGTH, 0.9999);
 		for(int i = 1; i < world_size; i++){
-			MPI_Send(binary_regular.c_str(), binary_regular.size(), MPI_CHAR, i, 0, MPI_COMM_WORLD);
+			MPI_Send(binary_regular.c_str(), size, MPI_CHAR, i, 0, MPI_COMM_WORLD);
 		}
+		delete [] buffer;
 	} else{
 		MPI_Recv(buffer, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		binary_regular = std::string(buffer, size);
